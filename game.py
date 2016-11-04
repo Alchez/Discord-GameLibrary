@@ -50,7 +50,7 @@ class Game:
                 await self.bot.say("{} already has this game in their library.".format(user.nick))
         else:
             game_list = get_games()
-            game_list[user.id] = game
+            game_list[user.id] = [game]
             dataIO.save_json("data/game/games.json", game_list)
 
     @game.command(pass_context=True)
@@ -69,7 +69,8 @@ class Game:
         game_list = get_games()
 
         if check_key(user.id):
-            game_list.pop[user.id, None]
+            del game_list[user.id]
+            dataIO.save_json("data/game/games.json", game_list)
             await self.bot.say("{}, you are way out of this league.".format(user.mention))
         else:
             await self.bot.say("That user does not exist in this league.")
@@ -138,6 +139,7 @@ class Game:
 
     @game.command(pass_context=True)
     async def steamlink(self, ctx, id, user: discord.Member=None):
+        """Link a Steam profile with a Discord ID"""
         if not user:
             user = ctx.message.author
 
@@ -154,6 +156,7 @@ class Game:
 
     @game.command(pass_context=True)
     async def update(self, ctx, user: discord.Member=None):
+        """Update a user's Steam game library"""
         if not user:
             user = ctx.message.author
 
@@ -237,8 +240,9 @@ def get_online_users(ctx):
     users = []
     for channel in ctx.message.server.channels:
         for user in channel.voice_members:
-            if user.bot is False:
+            if not user.bot:
                 users.append(user.id)
+
     if not users:
         # Get all online users if there are none in voice channels
         users = [user.id for user in ctx.message.server.members if user.status.name ==

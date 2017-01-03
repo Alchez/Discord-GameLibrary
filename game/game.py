@@ -18,7 +18,7 @@ class Game:
 
         # Checks if a subcommand has been passed or not
         if ctx.invoked_subcommand is None:
-            game = random.choice(get_suggestions(get_online_users(ctx)))
+            game = random.choice(get_suggestions(get_all_users(ctx)))
             await self.bot.say("Let's play some {}!".format(game))
 
     @game.command(pass_context=True)
@@ -31,7 +31,16 @@ class Game:
             await self.bot.say("{}, you already have this game in your library.".format(user.mention))
 
     @game.command(pass_context=True)
-    async def remove(self, ctx, game, user: discord.Member=None):
+    @checks.admin_or_permissions(manage_messages=True)
+    async def addto(self, ctx, game, user):
+        """Add a game to a user's game list """
+        if add(game, user.id):
+            await self.bot.say("{} was added to {}'s' library.".format(game, user.nick))
+        else:
+            await self.bot.say("{} already has this game in their library.".format(user.nick))
+
+    @game.command(pass_context=True)
+    async def remove(self, ctx, game):
         """Remove a game from your game list"""
         user = ctx.message.author
         if remove(game, user.id):
@@ -41,21 +50,7 @@ class Game:
 
     @game.command(pass_context=True)
     @checks.admin_or_permissions(manage_messages=True)
-    async def addto(self, ctx, game, user: discord.Member=None):
-        """Add a game to a user's game list """
-        if check_key(user.id):
-            if add(game, user.id):
-                await self.bot.say("{} was added to {}'s' library.".format(game, user.nick))
-            else:
-                await self.bot.say("{} already has this game in their library.".format(user.nick))
-        else:
-            game_list = get_games()
-            game_list[user.id] = [game]
-            dataIO.save_json("data/game/games.json", game_list)
-
-    @game.command(pass_context=True)
-    @checks.admin_or_permissions(manage_messages=True)
-    async def removefrom(self, ctx, game, user: discord.Member=None):
+    async def removefrom(self, ctx, game, user):
         """Remove a game from a user's game list"""
         if remove(game, user.id):
             await self.bot.say("{} was removed from {}'s' library.".format(game, user.nick))
@@ -86,13 +81,12 @@ class Game:
                 await self.bot.say("Aye {}, you have {} in your library".format(user.mention, game))
             else:
                 await self.bot.say("Nay {}, you do not have that game in your library.".format(user.mention))
-            return
 
         # Checks which user(s) has the game
         users_with_games = []
-        for user_id, games in game_list.items():
+        for user.id, games in game_list.items():
             if game in games:
-                user = ctx.message.server.get_member(user_id)
+                user = ctx.message.server.get_member(user.id)
                 users_with_games.append(user.nick or user.name)
 
         if not users_with_games:
@@ -114,9 +108,15 @@ class Game:
             await self.bot.say((box(page)))
 
     @game.command(pass_context=True)
-    async def suggest(self, ctx):
+    async def suggest(self, ctx, choice=None):
         """Print out a list with all common games"""
-        suggestions = get_suggestions(get_online_users(ctx))
+        if choice == None or choice.lower() == "all":
+            suggestions = get_suggestions(get_all_users(ctx))
+        elif choice.lower() == "voice":
+            suggestions = get_suggestions(get_voice_users(ctx))
+        elif choice.lower() == "online":
+            suggestions = get_suggestions(get_online_users(ctx))
+
         if not suggestions:
             await self.bot.say("You guys have **no games** in common, go buy some!")
             return
@@ -208,12 +208,20 @@ def get_steam_games(id):
     return games
 
 
-def check_key(user):
+def check_key(userid):
     game_list = get_games()
     key_list = game_list.keys()
 
-    if user in key_list:
+    if userid in key_list:
         return True
+    else:
+        return False
+
+
+def create_key(userid):
+    game_list = get_games()
+    game_list[userid] = []
+    dataIO.save_json("data/game/games.json", game_list)
 
 
 def check_category(id):
@@ -236,17 +244,31 @@ def get_suggestions(users):
     return sorted(list(suggestions))
 
 
+def get_all_users(ctx):
+    users = get_online_users(ctx)
+
+    if not users:
+        users = get_voice_users(ctx)
+
+    return users
+
+
 def get_online_users(ctx):
+    users = []
+    for user in ctx.message.server.members:
+        if user.status.name == "online" and user.bot is False:
+            users.append(user.id)
+
+    return users
+
+
+def get_voice_users(ctx):
     users = []
     for channel in ctx.message.server.channels:
         for user in channel.voice_members:
             if not user.bot:
                 users.append(user.id)
 
-    if not users:
-        # Get all online users if there are none in voice channels
-        users = [user.id for user in ctx.message.server.members if user.status.name ==
-                 "online" and user.bot is False]
     return users
 
 
@@ -261,21 +283,33 @@ def create_strawpoll(title, options):
     return json.loads(resp.text)['id']
 
 
-def add(game, user):
+def add(game, userid):
     game_list = get_games()
-    if game in game_list[user]:
-        return False
 
-    game_list[user].append(game)
-    dataIO.save_json("data/game/games.json", game_list)
-    return True
+    if check_key(userid):
+        if game in game_list[userid]:
+            return False
+        else:
+            game_list[userid].append(game)
+            dataIO.save_json("data/game/games.json", game_list)
+            return True
+    else:
+        create_key(userid)
+        game_list[userid].append(game)
+        dataIO.save_json("data/game/games.json", game_list)
+        return True
 
 
-def remove(game, user):
+def remove(game, userid):
     game_list = get_games()
-    if game not in game_list[user]:
-        return False
 
-    game_list[user].remove(game)
-    dataIO.save_json("data/game/games.json", game_list)
-    return True
+    if check_key(userid):
+        if game not in game_list[userid]:
+            return False
+        else:
+            game_list[userid].remove(game)
+            dataIO.save_json("data/game/games.json", game_list)
+            return True
+    else:
+        create_key(userid)
+        return False

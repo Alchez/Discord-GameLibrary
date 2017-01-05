@@ -62,7 +62,6 @@ class Game:
     async def removeuser(self, ctx, user: discord.Member=None):
         """Remove a user from the roster"""
         game_list = get_games()
-
         if check_key(user.id):
             del game_list[user.id]
             dataIO.save_json("data/game/games.json", game_list)
@@ -78,21 +77,23 @@ class Game:
         if user:
             # Checks if a user has the game
             if game in game_list[user.id]:
-                await self.bot.say("Aye {}, you have {} in your library".format(user.mention, game))
+                await self.bot.say("Aye {}, you have {} in your library.".format(user.mention, game))
             else:
                 await self.bot.say("Nay {}, you do not have that game in your library.".format(user.mention))
+            return
 
         # Checks which user(s) has the game
         users_with_games = []
-        for user.id, games in game_list.items():
+        for userid, games in game_list.items():
             if game in games:
-                user = ctx.message.server.get_member(user.id)
-                users_with_games.append(user.nick or user.name)
+                player = ctx.message.server.get_member(userid)
+                if player:
+                    users_with_games.append(player.nick or player.name)
 
         if not users_with_games:
             await self.bot.say("None of you have {}!".format(game))
         else:
-            await self.bot.say("The following have {}: {}".format(game, box("\n".join(users_with_games))))
+            await self.bot.say("The following of you have {}: {}".format(game, box("\n".join(users_with_games))))
 
     @game.command(pass_context=True)
     async def list(self, ctx, user: discord.Member=None):
@@ -110,12 +111,16 @@ class Game:
     @game.command(pass_context=True)
     async def suggest(self, ctx, choice=None):
         """Print out a list with all common games"""
-        if choice == None or choice.lower() == "all":
+        suggestions = []
+
+        if choice is None or choice.lower() == "all":
             suggestions = get_suggestions(get_all_users(ctx))
         elif choice.lower() == "voice":
             suggestions = get_suggestions(get_voice_users(ctx))
         elif choice.lower() == "online":
             suggestions = get_suggestions(get_online_users(ctx))
+        else:
+        	await self.bot.say("Please enter a valid filter!")
 
         if not suggestions:
             await self.bot.say("You guys have **no games** in common, go buy some!")
@@ -238,6 +243,9 @@ def check_category(id):
 
 
 def get_suggestions(users):
+    if not users:
+        return
+
     game_list = get_games()
     user_game_list = [game_list.get(user, []) for user in users]
     suggestions = set(user_game_list[0]).intersection(*user_game_list[1:])

@@ -1,4 +1,4 @@
-# Discord-GameLibrary
+# Game Library Cog for Discord's RedBot
 A discord cog for creating user game lists, finding game list intersections, and some more stuff.
 
 ## Commands:

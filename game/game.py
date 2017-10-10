@@ -1,11 +1,12 @@
-import discord
-from discord.ext import commands
-from cogs.utils.dataIO import dataIO
-from cogs.utils.chat_formatting import box, pagify
-from .utils import checks
-import random
-import requests
 import json
+import random
+
+import discord
+import requests
+from cogs.utils import checks
+from cogs.utils.chat_formatting import box, pagify
+from cogs.utils.dataIO import dataIO
+from discord.ext import commands
 
 
 class Game:
@@ -14,7 +15,7 @@ class Game:
 
     @commands.group(name="game", pass_context=True)
     async def game(self, ctx):
-        """Get a random game common to everyone online"""
+        "Get a random game common to all online users"
 
         # Checks if a subcommand has been passed or not
         if ctx.invoked_subcommand is None:
@@ -23,8 +24,10 @@ class Game:
 
     @game.command(pass_context=True)
     async def add(self, ctx, game):
-        """Add a game to your game list """
+        "Add a game to your game list"
+
         user = ctx.message.author
+
         if add(game, user.id):
             await self.bot.say("{}, {} was added to your library.".format(user.mention, game))
         else:
@@ -33,7 +36,8 @@ class Game:
     @game.command(pass_context=True)
     @checks.admin_or_permissions(manage_messages=True)
     async def addto(self, ctx, game, user):
-        """Add a game to a user's game list """
+        "Add a game to any user's game list"
+
         if add(game, user.id):
             await self.bot.say("{} was added to {}'s' library.".format(game, user.nick))
         else:
@@ -41,8 +45,10 @@ class Game:
 
     @game.command(pass_context=True)
     async def remove(self, ctx, game):
-        """Remove a game from your game list"""
+        "Remove a game from your game list"
+
         user = ctx.message.author
+
         if remove(game, user.id):
             await self.bot.say("{}, {} was removed from your library.".format(user.mention, game))
         else:
@@ -51,7 +57,8 @@ class Game:
     @game.command(pass_context=True)
     @checks.admin_or_permissions(manage_messages=True)
     async def removefrom(self, ctx, game, user):
-        """Remove a game from a user's game list"""
+        "Remove a game from any user's game list"
+
         if remove(game, user.id):
             await self.bot.say("{} was removed from {}'s' library.".format(game, user.nick))
         else:
@@ -60,8 +67,10 @@ class Game:
     @game.command(pass_context=True)
     @checks.admin_or_permissions(manage_messages=True)
     async def removeuser(self, ctx, user: discord.Member=None):
-        """Remove a user from the roster"""
+        "Remove a user from the roster"
+
         game_list = get_games()
+
         if check_key(user.id):
             del game_list[user.id]
             dataIO.save_json("data/game/games.json", game_list)
@@ -71,7 +80,8 @@ class Game:
 
     @game.command(pass_context=True)
     async def check(self, ctx, game, user: discord.Member=None):
-        """Checks games against user(s)"""
+        "Checks if a game exists in all users' libraries (or a single user if given)"
+
         game_list = get_games()
 
         if user:
@@ -82,8 +92,9 @@ class Game:
                 await self.bot.say("Nay {}, you do not have that game in your library.".format(user.mention))
             return
 
-        # Checks which user(s) has the game
         users_with_games = []
+
+        # Checks which user(s) has the game
         for userid, games in game_list.items():
             if game in games:
                 player = ctx.message.server.get_member(userid)
@@ -97,7 +108,8 @@ class Game:
 
     @game.command(pass_context=True)
     async def list(self, ctx, user: discord.Member=None):
-        """Print out your game list"""
+        "Print out your game list"
+
         game_list = get_games()
 
         if not user:
@@ -105,12 +117,14 @@ class Game:
 
         await self.bot.say("{}, your games:".format(user.mention))
         message = pagify(", ".join(sorted(game_list[user.id])), [', '])
+
         for page in message:
             await self.bot.say((box(page)))
 
     @game.command(pass_context=True)
     async def suggest(self, ctx, choice=None):
-        """Print out a list with all common games"""
+        "Print out a list with all common games"
+
         suggestions = []
 
         if choice is None or choice.lower() == "all":
@@ -120,7 +134,7 @@ class Game:
         elif choice.lower() == "online":
             suggestions = get_suggestions(get_online_users(ctx))
         else:
-        	await self.bot.say("Please enter a valid filter!")
+            await self.bot.say("Please enter a valid filter!")
 
         if not suggestions:
             await self.bot.say("You guys have **no games** in common, go buy some!")
@@ -128,13 +142,16 @@ class Game:
 
         await self.bot.say("You can play these games: \n")
         message = pagify("\n".join(suggestions), ['\n'])
+
         for page in message:
             await self.bot.say(box(page))
 
     @game.command(pass_context=True)
     async def poll(self, ctx):
-        """Make a poll from common games"""
+        "Make a poll from common games"
+
         suggestions = get_suggestions(get_online_users(ctx))
+
         if not suggestions:
             await self.bot.say("You guys have **no games** in common, go buy some!")
             return
@@ -144,7 +161,8 @@ class Game:
 
     @game.command(pass_context=True)
     async def steamlink(self, ctx, id, user: discord.Member=None):
-        """Link a Steam profile with a Discord ID"""
+        "Link a Steam profile with a Discord ID"
+
         if not user:
             user = ctx.message.author
 
@@ -161,7 +179,8 @@ class Game:
 
     @game.command(pass_context=True)
     async def update(self, ctx, user: discord.Member=None):
-        """Update a user's Steam game library"""
+        "Update a user's Steam game library"
+
         if not user:
             user = ctx.message.author
 
@@ -174,6 +193,7 @@ class Game:
         game_list = get_games(user.id)
         game_list.extend(games)
         set_user_games(user.id, list(set(game_list)))
+
         await self.bot.say("{}'s games have been updated".format(user.mention))
 
 
@@ -205,7 +225,7 @@ def get_user_steam_id(userid):
 
 
 def get_steam_games(id):
-    url = "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=27B11158905342682CD23ED16830DC0D&steamid={id}&include_appinfo=1&format=json".format(
+    url = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=27B11158905342682CD23ED16830DC0D&steamid={id}&include_appinfo=1&format=json".format(
         id=id)
     r = requests.get(url)
     games = [game.get('name') for game in json.loads(r.text).get(
@@ -249,6 +269,7 @@ def get_suggestions(users):
     game_list = get_games()
     user_game_list = [game_list.get(user, []) for user in users]
     suggestions = set(user_game_list[0]).intersection(*user_game_list[1:])
+
     return sorted(list(suggestions))
 
 
@@ -263,6 +284,7 @@ def get_all_users(ctx):
 
 def get_online_users(ctx):
     users = []
+
     for user in ctx.message.server.members:
         if user.status.name == "online" and user.bot is False:
             users.append(user.id)
@@ -272,6 +294,7 @@ def get_online_users(ctx):
 
 def get_voice_users(ctx):
     users = []
+
     for channel in ctx.message.server.channels:
         for user in channel.voice_members:
             if not user.bot:
@@ -288,6 +311,7 @@ def create_strawpoll(title, options):
     }
     resp = requests.post('http://strawpoll.me/api/v2/polls',
                          headers={'content-type': 'application/json'}, json=data)
+
     return json.loads(resp.text)['id']
 
 

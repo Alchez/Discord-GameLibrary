@@ -19,8 +19,12 @@ class Game:
 
         # Checks if a subcommand has been passed or not
         if ctx.invoked_subcommand is None:
-            game = random.choice(get_suggestions(get_all_users(ctx)))
-            await self.bot.say("Let's play some {}!".format(game))
+            suggestions = get_suggestions(get_all_users(ctx))
+
+            if suggestions:
+                await self.bot.say("Let's play some {}!".format(random.choice(suggestions)))
+            else:
+                await self.bot.say("You do not have any games, go buy some!")
 
     @game.command(pass_context=True)
     async def add(self, ctx, game):

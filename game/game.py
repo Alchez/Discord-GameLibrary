@@ -80,7 +80,11 @@ class Game:
 
     @game.command(pass_context=True)
     async def check(self, ctx, game, user: discord.Member=None):
-        "Checks if a game exists in all users' libraries (or a single user if given)"
+        """Checks if a game exists in a user's (or all users') library
+
+        game: Name of the game
+        user: (Optional) If given, check the user's library, otherwise check all user libraries
+        """
 
         game_list = get_games()
 
@@ -137,7 +141,7 @@ class Game:
             await self.bot.say("Please enter a valid filter!")
 
         if not suggestions:
-            await self.bot.say("You guys have **no games** in common, go buy some!")
+            await self.bot.say("You have **no games** in common, go buy some!")
             return
 
         await self.bot.say("You can play these games: \n")
@@ -153,7 +157,7 @@ class Game:
         suggestions = get_suggestions(get_online_users(ctx))
 
         if not suggestions:
-            await self.bot.say("You guys have **no games** in common, go buy some!")
+            await self.bot.say("You have **no games** in common, go buy some!")
             return
 
         id = create_strawpoll("What to play?", suggestions)
@@ -204,13 +208,19 @@ class Game:
             user = ctx.message.author
 
         id = get_user_steam_id(user.id)
+
         if not id:
             await self.bot.say("{}, your Discord ID is not yet linked with a Steam ID.".format(user.mention))
             return
 
-        games = get_steam_games(id)
+        steam_games = get_steam_games(id)
         game_list = get_games(user.id)
-        game_list.extend(games)
+
+        if game_list:
+            game_list.extend(steam_games)
+        else:
+            game_list = steam_games
+
         set_user_games(user.id, list(set(game_list)))
 
         await self.bot.say("{}, your Steam games have been updated!".format(user.mention))

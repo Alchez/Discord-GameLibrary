@@ -161,13 +161,32 @@ class Game:
 
     @game.command(pass_context=True)
     async def steamlink(self, ctx, id, user: discord.Member=None):
-        "Link a Steam profile with a Discord ID"
+        """
+        Link a Steam profile with a Discord ID
+
+        id: Steam Name or Steam ID (64-bit)
+        user: (Optional) If given, link library to user, otherwise default to user of the message
+        """
 
         if not user:
             user = ctx.message.author
 
-        ids = get_steam_ids()
-        ids[user.id] = id
+        try:
+            id = int(id)
+            ids = get_steam_ids()
+            ids[user.id] = id
+        except:
+            url = "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=27B11158905342682CD23ED16830DC0D&vanityurl={id}&format=json".format(
+                id=id)
+            r = requests.get(url)
+            response = json.loads(r.text).get('response')
+
+            ids = get_steam_ids()
+            if response.get('success') == 1:
+                ids[user.id] = response.get('steamid')
+            else:
+                await self.bot.say("{}, there was a problem linking your Steam name. Please try again with your 64-bit Steam ID instead.".format(user.mention))
+
         dataIO.save_json("data/game/steamids.json", ids)
 
         if not check_key(user.id):
@@ -186,7 +205,7 @@ class Game:
 
         id = get_user_steam_id(user.id)
         if not id:
-            await self.bot.say("{}, you are not linked with a Steam ID.".format(user.mention))
+            await self.bot.say("{}, your Discord ID is not yet linked with a Steam ID.".format(user.mention))
             return
 
         games = get_steam_games(id)
@@ -194,7 +213,7 @@ class Game:
         game_list.extend(games)
         set_user_games(user.id, list(set(game_list)))
 
-        await self.bot.say("{}'s games have been updated".format(user.mention))
+        await self.bot.say("{}, your Steam games have been updated!".format(user.mention))
 
 
 def setup(bot):

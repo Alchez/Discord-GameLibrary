@@ -116,18 +116,26 @@ class Game:
 
     @game.command(pass_context=True)
     async def list(self, ctx, user: discord.Member=None):
-        "Print out your game list"
+        """
+        Print out a user's game list
 
-        game_list = get_games()
+        user: (Optional) If given, list a user's game library, otherwise list the message user's library
+        """
 
         if not user:
             user = ctx.message.author
 
-        await self.bot.say("{}, your games:".format(user.mention))
-        message = pagify(", ".join(sorted(game_list[user.id])), [', '])
+        game_list = get_games()
 
-        for page in message:
-            await self.bot.say((box(page)))
+        if check_key(user.id) and game_list.get(user.id, False):
+            message = pagify(", ".join(sorted(game_list[user.id])), [', '])
+
+            await self.bot.say("{}, your games:".format(user.mention))
+
+            for page in message:
+                await self.bot.say((box(page)))
+        else:
+            await self.bot.say("{}, you do not have any games. Add one using `[p]game add <game_name>` or link your Steam profile with `[p]game steamlink <steam_id>` and run `[p]game update`.".format(user.mention))
 
     @game.command(pass_context=True)
     async def suggest(self, ctx, choice=None):

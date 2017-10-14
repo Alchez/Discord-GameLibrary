@@ -180,16 +180,17 @@ class Game:
         """
         Link a Steam profile with a Discord ID
 
-        id: Steam Name or Steam ID (64-bit)
+        id: Steam Name (found in your Custom URL -> steamcommunity.com/id/<name>) or Steam ID (64-bit)
         user: (Optional) If given, link library to user, otherwise default to user of the message
         """
 
         if not user:
             user = ctx.message.author
 
+        ids = get_steam_ids()
+
         try:
             id = int(id)
-            ids = get_steam_ids()
             ids[user.id] = id
         except:
             url = "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=27B11158905342682CD23ED16830DC0D&vanityurl={id}&format=json".format(
@@ -197,7 +198,6 @@ class Game:
             r = requests.get(url)
             response = json.loads(r.text).get('response')
 
-            ids = get_steam_ids()
             if response.get('success') == 1:
                 ids[user.id] = response.get('steamid')
             else:
@@ -346,7 +346,9 @@ def get_voice_users(ctx):
 
 def create_strawpoll(title, options):
     data = {
-        "captcha": "false", "dupcheck": "normal", "multi": "true",
+        "captcha": "false",
+        "dupcheck": "normal",
+        "multi": "true",
         "title": title,
         "options": options
     }
@@ -360,17 +362,19 @@ def add(game, userid):
     game_list = get_games()
 
     if check_key(userid):
-        if game in game_list[userid]:
-            return False
+        if game_list[userid]:
+            if game in game_list[userid]:
+                return False
+            else:
+                game_list[userid].append(game)
         else:
-            game_list[userid].append(game)
-            dataIO.save_json("data/game/games.json", game_list)
-            return True
+            game_list[userid] = [game]
     else:
         create_key(userid)
-        game_list[userid].append(game)
-        dataIO.save_json("data/game/games.json", game_list)
-        return True
+        game_list[userid] = [game]
+
+    dataIO.save_json("data/game/games.json", game_list)
+    return True
 
 
 def remove(game, userid):

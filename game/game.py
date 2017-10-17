@@ -19,7 +19,7 @@ class Game:
 
         # Checks if a subcommand has been passed or not
         if ctx.invoked_subcommand is None:
-            suggestions = get_suggestions(get_all_users(ctx))
+            suggestions = get_suggestions(get_online_users(ctx))
 
             if suggestions:
                 await self.bot.say("Let's play some {}!".format(random.choice(suggestions)))
@@ -139,41 +139,44 @@ class Game:
 
     @game.command(pass_context=True)
     async def suggest(self, ctx, choice=None):
-        "Print out a list with all common games"
+        """
+        Print out a list of all games common to currently online users (or users in voice channels)
 
-        suggestions = []
+        choice: (Optional) Either 'online' (for all online users) or 'voice' (for all users in a voice channel))
+        """
 
-        if choice is None or choice.lower() == "all":
-            suggestions = get_suggestions(get_all_users(ctx))
-        elif choice.lower() == "voice":
-            suggestions = get_suggestions(get_voice_users(ctx))
-        elif choice.lower() == "online":
-            suggestions = get_suggestions(get_online_users(ctx))
+        if choice is None or choice.lower() in ("online", "voice"):
+            suggestions = get_suggestions(get_online_users(ctx, choice))
+
+            if suggestions:
+                await self.bot.say("You can play these games: \n")
+                message = pagify("\n".join(suggestions), ['\n'])
+
+                for page in message:
+                    await self.bot.say(box(page))
+            else:
+                await self.bot.say("You have exactly **zero** games in common, go buy a 4-pack!")
         else:
-            await self.bot.say("Please enter a valid filter!")
-
-        if not suggestions:
-            await self.bot.say("You have **no games** in common, go buy some!")
-            return
-
-        await self.bot.say("You can play these games: \n")
-        message = pagify("\n".join(suggestions), ['\n'])
-
-        for page in message:
-            await self.bot.say(box(page))
+            await self.bot.say("Please enter a valid filter -> either use `online` (default) to get a random suggested game common to all online users or `voice` for all users in a voice channel")
 
     @game.command(pass_context=True)
-    async def poll(self, ctx):
-        "Make a poll from common games"
+    async def poll(self, ctx, choice=None):
+        """
+        Make a poll from all games common to currently online users (or users in voice channels)
 
-        suggestions = get_suggestions(get_online_users(ctx))
+        choice: (Optional) Either 'online' (for all online users) or 'voice' (for all users in a voice channel))
+        """
 
-        if not suggestions:
-            await self.bot.say("You have **no games** in common, go buy some!")
-            return
+        if choice is None or choice.lower() in ("online", "voice"):
+            suggestions = get_suggestions(get_online_users(ctx, choice))
 
-        id = create_strawpoll("What to play?", suggestions)
-        await self.bot.say("Here's your strawpoll link: http://strawpoll.me/{}".format(id))
+            if suggestions:
+                id = create_strawpoll("What to play?", suggestions)
+                await self.bot.say("Here's your strawpoll link: http://strawpoll.me/{}".format(id))
+            else:
+                await self.bot.say("You have exactly **zero** games in common, go buy a 4-pack!")
+        else:
+            await self.bot.say("Please enter a valid filter -> either use `online` (default) to get a random suggested game common to all online users or `voice` for all users in a voice channel")
 
     @game.command(pass_context=True)
     async def steamlink(self, ctx, id, user: discord.Member=None):
@@ -293,7 +296,7 @@ def create_key(userid):
 def check_category(id):
     return True
     # url = "http://store.steampowered.com/api/appdetails?appids={id}".format(id=id)
-    # r= requests.get(url)
+    # r = requests.get(url)
     # data = json.loads(r.text)
     # if data.get('success'):
     #   categories = [game.get('id') for game in data.get(str(id)).get('data').get('categories')]
@@ -308,38 +311,25 @@ def get_suggestions(users):
         return
 
     game_list = get_games()
+
     user_game_list = [game_list.get(user, []) for user in users]
     suggestions = set(user_game_list[0]).intersection(*user_game_list[1:])
 
     return sorted(list(suggestions))
 
 
-def get_all_users(ctx):
-    users = get_online_users(ctx)
-
-    if not users:
-        users = get_voice_users(ctx)
-
-    return users
-
-
-def get_online_users(ctx):
+def get_online_users(ctx, choice=None):
     users = []
 
-    for user in ctx.message.server.members:
-        if user.status.name == "online" and user.bot is False:
-            users.append(user.id)
-
-    return users
-
-
-def get_voice_users(ctx):
-    users = []
-
-    for channel in ctx.message.server.channels:
-        for user in channel.voice_members:
-            if not user.bot:
+    if choice is None or choice.lower == "online":
+        for user in ctx.message.server.members:
+            if user.status.name == "online" and not user.bot:
                 users.append(user.id)
+    elif choice.lower() == "voice":
+        for channel in ctx.message.server.channels:
+            for user in channel.voice_members:
+                if not user.bot:
+                    users.append(user.id)
 
     return users
 

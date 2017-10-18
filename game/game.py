@@ -122,21 +122,23 @@ class Game:
         user: (Optional) If given, list a user's game library, otherwise list the message user's library
         """
 
+        author = ctx.message.author
+
         if not user:
-            user = ctx.message.author
+            user = author
 
         game_list = get_games()
 
         if check_key(user.id) and game_list.get(user.id, False):
             message = pagify(", ".join(sorted(game_list[user.id])), [', '])
 
-            await self.bot.say("Please check your DM for your library, {}.".format(user.mention))
-            await self.bot.send_message(user, "{}, your games:".format(user.mention))
+            await self.bot.say("Please check your DM for the full list of games, {}.".format(author.mention))
+            await self.bot.send_message(author, "{}'s games:".format(user.mention))
 
             for page in message:
-                await self.bot.send_message(user, (box(page)))
+                await self.bot.send_message(author, (box(page)))
         else:
-            await self.bot.say("{}, you do not have any games. Add one using `[p]game add <game_name>` or link your Steam profile with `[p]game steamlink <steam_id>` and run `[p]game update`.".format(user.mention))
+            await self.bot.say("{}, you do not have any games. Add one using `[p]game add <game_name>` and/or link your Steam profile with `[p]game steamlink <steam_id>`.".format(user.mention))
 
     @game.command(pass_context=True)
     async def suggest(self, ctx, choice=None):

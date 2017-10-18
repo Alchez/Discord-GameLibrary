@@ -19,7 +19,7 @@ class Game:
 
         # Checks if a subcommand has been passed or not
         if ctx.invoked_subcommand is None:
-            suggestions = get_suggestions(get_online_users(ctx))
+            suggestions = get_suggestions(get_users(ctx))
 
             if suggestions:
                 await self.bot.say("Let's play some {}!".format(random.choice(suggestions)))
@@ -140,13 +140,13 @@ class Game:
     @game.command(pass_context=True)
     async def suggest(self, ctx, choice=None):
         """
-        Print out a list of all games common to currently online users (or users in voice channels)
+        List out common games of all online users (or users in voice channels)
 
         choice: (Optional) Either 'online' (for all online users) or 'voice' (for all users in a voice channel))
         """
 
         if choice is None or choice.lower() in ("online", "voice"):
-            suggestions = get_suggestions(get_online_users(ctx, choice))
+            suggestions = get_suggestions(get_users(ctx, choice))
 
             if suggestions:
                 await self.bot.say("You can play these games: \n")
@@ -162,13 +162,13 @@ class Game:
     @game.command(pass_context=True)
     async def poll(self, ctx, choice=None):
         """
-        Make a poll from all games common to currently online users (or users in voice channels)
+        Poll from the common games of all online users (or users in voice channels)
 
         choice: (Optional) Either 'online' (for all online users) or 'voice' (for all users in a voice channel))
         """
 
         if choice is None or choice.lower() in ("online", "voice"):
-            suggestions = get_suggestions(get_online_users(ctx, choice))
+            suggestions = get_suggestions(get_users(ctx, choice))
 
             if suggestions:
                 id = create_strawpoll("What to play?", suggestions)
@@ -183,7 +183,7 @@ class Game:
         """
         Link a Steam profile with a Discord ID
 
-        id: Steam Name (found in your Custom URL -> steamcommunity.com/id/<name>) or Steam ID (64-bit)
+        id: Steam Name (found in your Custom URL -> steamcommunity.com/id/<name>) or Steam ID (64-bit ID -> steamcommunity.com/profiles/<id>)
         user: (Optional) If given, link library to user, otherwise default to user of the message
         """
 
@@ -215,6 +215,11 @@ class Game:
 
         await self.bot.say("{}'s account has been linked with Steam.".format(user.mention))
 
+        # Update the user's library with their Steam games
+        set_steam_games(ids[user.id], user.id)
+
+        await self.bot.say("{}, your Steam games have been updated!".format(user.mention))
+
     @game.command(pass_context=True)
     async def update(self, ctx, user: discord.Member=None):
         "Update a user's Steam game library"
@@ -228,15 +233,7 @@ class Game:
             await self.bot.say("{}, your Discord ID is not yet linked with a Steam ID.".format(user.mention))
             return
 
-        steam_games = get_steam_games(id)
-        game_list = get_games(user.id)
-
-        if game_list:
-            game_list.extend(steam_games)
-        else:
-            game_list = steam_games
-
-        set_user_games(user.id, list(set(game_list)))
+        set_steam_games(id, user.id)
 
         await self.bot.say("{}, your Steam games have been updated!".format(user.mention))
 
@@ -253,10 +250,18 @@ def get_games(userid=None):
         return games[userid]
 
 
-def set_user_games(userid, game_list):
-    games = get_games()
-    games[userid] = game_list
-    dataIO.save_json("data/game/games.json", games)
+def set_steam_games(steamid, userid):
+    steam_games = get_steam_games(steamid)
+    game_list = get_games()
+    user_game_list = game_list.get(userid)
+
+    if user_game_list:
+        user_game_list.extend(steam_games)
+    else:
+        user_game_list = steam_games
+
+    game_list[userid] = list(set(user_game_list))
+    dataIO.save_json("data/game/games.json", game_list)
 
 
 def get_steam_ids():
@@ -312,13 +317,16 @@ def get_suggestions(users):
 
     game_list = get_games()
 
+    # Get only games for the provided list of users
     user_game_list = [game_list.get(user, []) for user in users]
-    suggestions = set(user_game_list[0]).intersection(*user_game_list[1:])
+    user_game_list = list(filter(None.__ne__, user_game_list))
 
-    return sorted(list(suggestions))
+    if user_game_list:
+        suggestions = set(user_game_list[0]).intersection(*user_game_list[1:])
+        return sorted(list(suggestions))
 
 
-def get_online_users(ctx, choice=None):
+def get_users(ctx, choice=None):
     users = []
 
     if choice is None or choice.lower == "online":

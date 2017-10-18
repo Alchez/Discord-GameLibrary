@@ -1,5 +1,5 @@
-# Game Library Cog for Discord's RedBot
-A discord cog for creating user game lists, finding game list intersections, and some more stuff.
+# Game Library Cog for [RedBot](https://github.com/Cog-Creators/Red-DiscordBot)
+A Discord cog for creating user game lists, finding game list intersections, and some more stuff.
 
 ## Commands:
 All the following commands need to be prefixed with '[p]game'. For example, if you want to manually add a game to your library with a '!' prefix, use:
@@ -7,7 +7,7 @@ All the following commands need to be prefixed with '[p]game'. For example, if y
     !game add (game_name)
 
 ### Steam:
-* `steamlink` - Links a Steam library to a Discord ID - all user libraries are stored in a JSON.
+* `steamlink` - Links a Steam library to a Discord ID
 * `update` - Updates a user's game library with their linked Steam games (for new games and accidental deletions!).
 
 ### Non-Steam:
@@ -26,3 +26,5 @@ All the following commands need to be prefixed with '[p]game'. For example, if y
 ### Library:
 * `list` - Prints out a user's entire game library (Steam + non-Steam).
 * `check` - Checks for a game in a user's library, or for all valid users in the server.
+
+Made with <3 by [Alchez](https://github.com/Alchez) and [Falk](https://github.com/vjFaLk)

@@ -117,7 +117,7 @@ class Game:
     @game.command(pass_context=True)
     async def list(self, ctx, user: discord.Member=None):
         """
-        Print out a user's game list
+        Print out a user's game list (sends as a DM)
 
         user: (Optional) If given, list a user's game library, otherwise list the message user's library
         """
@@ -130,10 +130,11 @@ class Game:
         if check_key(user.id) and game_list.get(user.id, False):
             message = pagify(", ".join(sorted(game_list[user.id])), [', '])
 
-            await self.bot.say("{}, your games:".format(user.mention))
+            await self.bot.say("Please check your DM for your library, {}.".format(user.mention))
+            await self.bot.send_message(user, "{}, your games:".format(user.mention))
 
             for page in message:
-                await self.bot.say((box(page)))
+                await self.bot.send_message(user, (box(page)))
         else:
             await self.bot.say("{}, you do not have any games. Add one using `[p]game add <game_name>` or link your Steam profile with `[p]game steamlink <steam_id>` and run `[p]game update`.".format(user.mention))
 

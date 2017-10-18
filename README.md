@@ -27,4 +27,6 @@ All the following commands need to be prefixed with '[p]game'. For example, if y
 * `list` - Prints out a user's entire game library (Steam + non-Steam).
 * `check` - Checks for a game in a user's library, or for all valid users in the server.
 
-Made with <3 by [Alchez](https://github.com/Alchez) and [Falk](https://github.com/vjFaLk)
+---
+
+Made with <3 by [Alchez](https://github.com/Alchez) and [vjFaLk](https://github.com/vjFaLk)

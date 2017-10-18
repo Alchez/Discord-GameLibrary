@@ -175,7 +175,10 @@ class Game:
 
             if suggestions:
                 id = create_strawpoll("What to play?", suggestions)
-                await self.bot.say("Here's your strawpoll link: http://strawpoll.me/{}".format(id))
+                if id:
+                    await self.bot.say("Here's your strawpoll link: https://www.strawpoll.me/{}".format(id))
+                else:
+                    await self.bot.say("Phew! You have way too many games to create a poll. You should try `[p]game suggest` instead.")
             else:
                 await self.bot.say("You have exactly **zero** games in common, go buy a 4-pack!")
         else:
@@ -353,10 +356,12 @@ def create_strawpoll(title, options):
         "title": title,
         "options": options
     }
-    resp = requests.post('http://strawpoll.me/api/v2/polls',
+    resp = requests.post('https://www.strawpoll.me/api/v2/polls',
                          headers={'content-type': 'application/json'}, json=data)
-
-    return json.loads(resp.text)['id']
+    try:
+        return json.loads(resp.text)['id']
+    except:
+        return False
 
 
 def add(game, userid):

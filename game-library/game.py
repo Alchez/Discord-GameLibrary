@@ -18,7 +18,7 @@ MANAGE_MESSAGES = {"manage_messages": True}
 STRAWPOLL_GET_ENDPOINT = "https://www.strawpoll.me/{poll_id}"
 STRAWPOLL_CREATE_ENDPOINT = "https://www.strawpoll.me/api/v2/polls"
 STEAM_RESOLVE_NAME_ENDPOINT = "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key={key}&vanityurl={steam_id}&format=json"
-STEAM_GET_USER_GAMES_ENDPOINT = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={key}&steamid={steam_id}&include_played_free_games=1&format=json"
+STEAM_GET_USER_GAMES_ENDPOINT = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={key}&steamid={steam_id}&include_appinfo=1&include_played_free_games=1&format=json"
 
 
 class MemberNotInVoiceChannelError(Exception):
